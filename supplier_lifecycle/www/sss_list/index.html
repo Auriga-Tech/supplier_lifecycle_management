@@ -1,0 +1,45 @@
+{% extends "templates/web.html" %}
+
+{% block style %}
+<link rel="stylesheet" href="/assets/supplier_lifecycle/css/supplier_portal.css">
+{% endblock %}
+
+{% block page_content %}
+<div class="sl-portal">
+	<div class="sl-portal-header">
+		<div>
+			<h2>{{ _("Satisfaction Surveys") }}</h2>
+			<p class="sl-subtitle">{{ _("Periodic surveys sent about your engagement as a supplier.") }}</p>
+		</div>
+	</div>
+
+	{% if surveys %}
+	{% set badge_class = {
+		"Open": "neutral",
+		"In Progress": "progress",
+		"Ratings Given": "warning",
+		"Completed": "success",
+		"Cancelled": "danger",
+	} %}
+	<div class="sl-list">
+		{% for s in surveys %}
+		<a class="sl-list-item" href="/supplier-satisfaction-surveys/{{ s.name }}">
+			<div class="sl-list-item-main">
+				<div class="sl-list-item-title">{{ s.period }}</div>
+				<div class="sl-list-item-meta">
+					<span>{{ s.name }}</span>
+					<span>{{ _("Survey Date") }}: {{ s.survey_date }}</span>
+				</div>
+			</div>
+			<div class="sl-list-item-side">
+				<span class="sl-badge sl-badge-{{ badge_class.get(s.status, 'neutral') }}">{{ _(s.status) }}</span>
+				<span class="sl-list-item-arrow">&rsaquo;</span>
+			</div>
+		</a>
+		{% endfor %}
+	</div>
+	{% else %}
+	<div class="sl-empty">{{ _("No surveys yet.") }}</div>
+	{% endif %}
+</div>
+{% endblock %}

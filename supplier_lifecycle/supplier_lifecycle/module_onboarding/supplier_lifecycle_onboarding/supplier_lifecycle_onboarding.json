@@ -1,0 +1,41 @@
+{
+ "allow_roles": [
+  {
+   "role": "Supplier Lifecycle Manager"
+  },
+  {
+   "role": "Supplier Lifecycle Manager"
+  }
+ ],
+ "creation": "2026-09-11 17:01:27.439186",
+ "docstatus": 0,
+ "doctype": "Module Onboarding",
+ "idx": 0,
+ "is_complete": 0,
+ "modified": "2026-09-11 17:01:27.439186",
+ "modified_by": "Administrator",
+ "module": "Supplier Lifecycle",
+ "name": "Supplier Lifecycle Onboarding",
+ "owner": "Administrator",
+ "steps": [
+  {
+   "step": "Supplier Onboarding Request Tour Step"
+  },
+  {
+   "step": "Supplier KYC Tour Step"
+  },
+  {
+   "step": "Supplier Deboarding Request Tour Step"
+  },
+  {
+   "step": "Supplier Deboarding Checklist Tour Step"
+  },
+  {
+   "step": "Supplier Satisfaction Survey Tour Step"
+  },
+  {
+   "step": "Supplier Lifecycle Settings Setup"
+  }
+ ],
+ "title": "Supplier Lifecycle Setup"
+}

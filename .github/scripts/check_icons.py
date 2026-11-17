@@ -15,9 +15,9 @@ import sys
 
 import frappe
 
-APP = "vendor_lifecycle"
-MODULE = "Vendor Lifecycle"
-LABEL = "Vendor Lifecycle"
+APP = "supplier_lifecycle"
+MODULE = "Supplier Lifecycle"
+LABEL = "Supplier Lifecycle"
 
 # DocType -> filters that pick this app's records.
 APP_RECORDS = {
