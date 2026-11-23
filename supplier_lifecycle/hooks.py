@@ -145,7 +145,7 @@ after_migrate = "supplier_lifecycle.supplier_lifecycle.install.after_migrate"
 # Uninstallation
 # ------------
 
-# before_uninstall = "supplier_lifecycle.uninstall.before_uninstall"
+before_uninstall = "supplier_lifecycle.supplier_lifecycle.uninstall.before_uninstall"
 after_uninstall = "supplier_lifecycle.supplier_lifecycle.uninstall.after_uninstall"
 
 # Integration Setup
