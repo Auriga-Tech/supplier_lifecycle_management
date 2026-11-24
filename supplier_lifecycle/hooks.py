@@ -5,7 +5,7 @@ app_description = "Supplier onboarding and deboarding lifecycle management for F
 app_email = "rahul.chaudhary@aurigait.com"
 app_license = "mit"
 # "?v=" makes browsers fetch the logo again after it changes (assets are cached for a year).
-app_logo_url = "/assets/supplier_lifecycle/icons/desktop_icons/subtle/supplier_lifecycle.svg?v=1"
+app_logo_url = "/assets/supplier_lifecycle/icons/desktop_icons/subtle/supplier_lifecycle.svg?v=2"
 app_home = "/desk/supplier-lifecycle"
 
 # Apps
