@@ -68,9 +68,18 @@ def after_install():
 	# Settings, which validates its mandatory fields.
 	from supplier_lifecycle.setup import install
 
+	# First: put back the data kept at the last uninstall (see data_keep), so kept Settings and
+	# templates win over the defaults created below.
+	restore_kept_data()
 	install()
 	after_migrate()
 	seed_defaults()
+
+
+def restore_kept_data():
+	from supplier_lifecycle.supplier_lifecycle.data_keep import KeptData
+
+	KeptData().restore()
 
 
 # There used to be a resync_default_email_template_styling() here, run on

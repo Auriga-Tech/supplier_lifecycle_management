@@ -10,8 +10,16 @@ def before_uninstall():
 	They are DocType Link rows with no module, so Frappe's own uninstall
 	leaves them behind, and the Supplier form's Connections tab then fails
 	with "DocType ... not found" for the app's deleted doctypes. Install and
-	every migrate add them back (setup.create_missing_supplier_connections)."""
+	every migrate add them back (setup.create_missing_supplier_connections).
+
+	First, the app's records are copied so a later install can bring them back (see data_keep)."""
 	from supplier_lifecycle.setup import SUPPLIER_CONNECTIONS
+	from supplier_lifecycle.supplier_lifecycle.data_keep import KeptData, keep_data_enabled
+
+	if keep_data_enabled():
+		KeptData().save()
+		# The tables dropped next can't be rolled back, so the copy must be safe before that.
+		frappe.db.commit()  # nosemgrep
 
 	for link_doctype, link_fieldname in SUPPLIER_CONNECTIONS:
 		frappe.db.delete(
