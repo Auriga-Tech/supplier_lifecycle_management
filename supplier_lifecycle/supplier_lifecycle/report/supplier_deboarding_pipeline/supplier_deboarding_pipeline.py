@@ -28,21 +28,19 @@ def get_columns() -> list[dict]:
 
 def get_data(filters: dict | None = None) -> list[dict]:
 	filters = filters or {}
-	conditions = []
-	params = {}
-	if filters.get("supplier"):
-		conditions.append("vdr.supplier = %(supplier)s")
-		params["supplier"] = filters["supplier"]
-	if filters.get("request"):
-		conditions.append("vdr.name = %(request)s")
-		params["request"] = filters["request"]
-	if filters.get("request_status"):
-		conditions.append("vdr.status = %(request_status)s")
-		params["request_status"] = filters["request_status"]
-	where_clause = f"where {' and '.join(conditions)}" if conditions else ""
+	# Every filter is bound as a query parameter and matched inside a fixed
+	# query — an unset filter is passed as an empty string, which its own
+	# `= ''` branch turns into "match everything". The SQL text never
+	# changes with the filter values, so nothing from the filters can ever
+	# reach the query as SQL.
+	params = {
+		"supplier": filters.get("supplier") or "",
+		"request": filters.get("request") or "",
+		"request_status": filters.get("request_status") or "",
+	}
 
 	rows = frappe.db.sql(
-		f"""
+		"""
 		select
 			vdr.name as request,
 			vdr.supplier,
@@ -59,7 +57,9 @@ def get_data(filters: dict | None = None) -> list[dict]:
 		from `tabSupplier Deboarding Request` vdr
 		left join `tabSupplier Deboarding Checklist` vdc on vdc.deboarding_request = vdr.name and vdc.docstatus != 2
 		left join `tabSupplier` s on s.name = vdr.supplier
-		{where_clause}
+		where (%(supplier)s = '' or vdr.supplier = %(supplier)s)
+			and (%(request)s = '' or vdr.name = %(request)s)
+			and (%(request_status)s = '' or vdr.status = %(request_status)s)
 		order by vdr.creation desc
 		""",
 		params,

@@ -41,22 +41,24 @@ def get_kyc_columns() -> list[dict]:
 
 def get_kyc_data(filters: dict | None = None) -> list[dict]:
 	filters = filters or {}
-	conditions = []
-	params = {}
-	if filters.get("company_name"):
-		conditions.append("vk.firm_name like %(company_name)s")
-		params["company_name"] = f"%{filters['company_name']}%"
-	if filters.get("kyc"):
-		conditions.append("vk.name = %(kyc)s")
-		params["kyc"] = filters["kyc"]
-	where_clause = f"where {' and '.join(conditions)}" if conditions else ""
+	company_name = filters.get("company_name") or ""
+	# Every filter is bound as a query parameter and matched inside a fixed
+	# query — an unset filter is passed as an empty string, which its own
+	# `= ''` branch turns into "match everything". The SQL text never
+	# changes with the filter values, so nothing from the filters can ever
+	# reach the query as SQL.
+	params = {
+		"company_name": company_name,
+		"company_name_like": f"%{company_name}%",
+		"kyc": filters.get("kyc") or "",
+	}
 
 	# Each stage's own latest (by creation) record for the KYC — a supplier
 	# who redid a stage shouldn't show stale data from an earlier attempt.
 	# Onboarding documents only: re-boarding and renewal ones carry the same
 	# KYC, and a cancelled one no longer counts.
 	rows = frappe.db.sql(
-		f"""
+		"""
 		select
 			vk.name as kyc,
 			vk.firm_name,
@@ -89,7 +91,8 @@ def get_kyc_data(filters: dict | None = None) -> list[dict]:
 				order by so.creation desc limit 1
 			) as sign_off_status
 		from `tabSupplier KYC` vk
-		{where_clause}
+		where (%(company_name)s = '' or vk.firm_name like %(company_name_like)s)
+			and (%(kyc)s = '' or vk.name = %(kyc)s)
 		order by vk.creation desc
 		""",
 		params,
@@ -116,52 +119,50 @@ def get_request_columns() -> list[dict]:
 
 
 def get_request_data(filters: dict | None = None) -> list[dict]:
+	filters = filters or {}
+	company_name = filters.get("company_name") or ""
+	# Every filter is bound as a query parameter and matched inside a fixed
+	# query — an unset filter is passed as an empty string, which its own
+	# `= ''` branch turns into "match everything". The SQL text never
+	# changes with the filter values, so nothing from the filters can ever
+	# reach the query as SQL.
+	params = {
+		"company_name": company_name,
+		"company_name_like": f"%{company_name}%",
+		"kyc": filters.get("kyc") or "",
+	}
+
 	# Anchored on the Onboarding Request instead of the KYC, so a request
 	# that hasn't had KYC started yet still shows up (the KYC-anchored view
 	# above only ever sees suppliers who've reached KYC). Each request's
-	# latest KYC (if any) is resolved once via a scalar subquery and reused
-	# for every downstream stage lookup.
-	latest_kyc_for_request = (
-		"(select vk.name from `tabSupplier KYC` vk"
-		" where vk.onboarding_request = vor.name order by vk.creation desc limit 1)"
-	)
-
-	filters = filters or {}
-	conditions = []
-	params = {}
-	if filters.get("company_name"):
-		conditions.append("vor.company_name like %(company_name)s")
-		params["company_name"] = f"%{filters['company_name']}%"
-	if filters.get("kyc"):
-		conditions.append(f"{latest_kyc_for_request} = %(kyc)s")
-		params["kyc"] = filters["kyc"]
-	where_clause = f"where {' and '.join(conditions)}" if conditions else ""
-
+	# latest KYC (if any) is resolved once by the left join below and reused
+	# as `vk` for every downstream stage lookup; a request with no KYC yet
+	# keeps a null `vk`, so each stage falls through to "Not Started".
 	rows = frappe.db.sql(
-		f"""
+		"""
 		select
 			vor.name as request,
 			vor.company_name,
 			case vor.docstatus when 0 then 'Draft' when 1 then 'Submitted' else 'Cancelled' end as request_status,
-			{latest_kyc_for_request} as kyc,
-			(select vk.status from `tabSupplier KYC` vk where vk.name = {latest_kyc_for_request}) as kyc_status,
-			(select vk.supplier from `tabSupplier KYC` vk where vk.name = {latest_kyc_for_request}) as supplier,
+			vk.name as kyc,
+			vk.status as kyc_status,
+			vk.supplier as supplier,
 			(
 				select bc.overall_status
 				from `tabSupplier Background Check` bc
-				where bc.kyc = {latest_kyc_for_request} and bc.is_reboarding = 0 and bc.docstatus < 2
+				where bc.kyc = vk.name and bc.is_reboarding = 0 and bc.docstatus < 2
 				order by bc.creation desc limit 1
 			) as background_check_status,
 			(
 				select ca.outcome
 				from `tabSupplier Compliance Audit` ca
-				where ca.kyc = {latest_kyc_for_request} and ca.is_reboarding = 0 and ca.docstatus < 2 and ca.is_renewal = 0
+				where ca.kyc = vk.name and ca.is_reboarding = 0 and ca.docstatus < 2 and ca.is_renewal = 0
 				order by ca.creation desc limit 1
 			) as compliance_audit_status,
 			(
 				select se.evaluation_outcome
 				from `tabSupplier Sampling Evaluation` se
-				where se.kyc = {latest_kyc_for_request} and se.is_reboarding = 0 and se.docstatus < 2 and se.is_renewal = 0
+				where se.kyc = vk.name and se.is_reboarding = 0 and se.docstatus < 2 and se.is_renewal = 0
 				order by se.creation desc limit 1
 			) as sampling_evaluation_status,
 			(
@@ -169,11 +170,18 @@ def get_request_data(filters: dict | None = None) -> list[dict]:
 					(case when so.sign_off_failed then 'Failed' else 'Signed' end)
 				else 'Draft' end
 				from `tabSupplier Sign Off` so
-				where so.kyc = {latest_kyc_for_request} and so.is_reboarding = 0 and so.docstatus < 2 and so.is_renewal = 0
+				where so.kyc = vk.name and so.is_reboarding = 0 and so.docstatus < 2 and so.is_renewal = 0
 				order by so.creation desc limit 1
 			) as sign_off_status
 		from `tabSupplier Onboarding Request` vor
-		{where_clause}
+		left join `tabSupplier KYC` vk on vk.name = (
+			select latest.name
+			from `tabSupplier KYC` latest
+			where latest.onboarding_request = vor.name
+			order by latest.creation desc limit 1
+		)
+		where (%(company_name)s = '' or vor.company_name like %(company_name_like)s)
+			and (%(kyc)s = '' or vk.name = %(kyc)s)
 		order by vor.creation desc
 		""",
 		params,

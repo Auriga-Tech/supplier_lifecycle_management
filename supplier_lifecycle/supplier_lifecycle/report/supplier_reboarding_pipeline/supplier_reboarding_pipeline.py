@@ -34,18 +34,16 @@ def get_columns() -> list[dict]:
 
 def get_data(filters: dict | None = None) -> list[dict]:
 	filters = filters or {}
-	conditions = []
-	params = {}
-	if filters.get("supplier"):
-		conditions.append("vrr.supplier = %(supplier)s")
-		params["supplier"] = filters["supplier"]
-	if filters.get("request"):
-		conditions.append("vrr.name = %(request)s")
-		params["request"] = filters["request"]
-	if filters.get("request_status"):
-		conditions.append("vrr.status = %(request_status)s")
-		params["request_status"] = filters["request_status"]
-	where_clause = f"where {' and '.join(conditions)}" if conditions else ""
+	# Every filter is bound as a query parameter and matched inside a fixed
+	# query — an unset filter is passed as an empty string, which its own
+	# `= ''` branch turns into "match everything". The SQL text never
+	# changes with the filter values, so nothing from the filters can ever
+	# reach the query as SQL.
+	params = {
+		"supplier": filters.get("supplier") or "",
+		"request": filters.get("request") or "",
+		"request_status": filters.get("request_status") or "",
+	}
 
 	# Each stage doctype is shared with onboarding (kyc-keyed) — every
 	# subquery here is scoped by reboarding_request instead, so onboarding's
@@ -54,7 +52,7 @@ def get_data(filters: dict | None = None) -> list[dict]:
 	# Pipeline's own KYC-anchored view — a stage redone during the same
 	# re-boarding run shouldn't show a stale earlier attempt.
 	rows = frappe.db.sql(
-		f"""
+		"""
 		select
 			vrr.name as request,
 			vrr.supplier,
@@ -89,7 +87,9 @@ def get_data(filters: dict | None = None) -> list[dict]:
 			) as sign_off_status
 		from `tabSupplier Reboarding Request` vrr
 		left join `tabSupplier` s on s.name = vrr.supplier
-		{where_clause}
+		where (%(supplier)s = '' or vrr.supplier = %(supplier)s)
+			and (%(request)s = '' or vrr.name = %(request)s)
+			and (%(request_status)s = '' or vrr.status = %(request_status)s)
 		order by vrr.creation desc
 		""",
 		params,
