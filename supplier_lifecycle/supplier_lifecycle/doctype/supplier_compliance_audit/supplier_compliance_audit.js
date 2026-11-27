@@ -100,8 +100,13 @@ frappe.ui.form.on("Supplier Compliance Audit", {
 						reboarding_request: frm.doc.reboarding_request,
 						sampling_type: "Reboarding",
 					}).then(() => {
-						if (cur_frm && cur_frm.doctype === "Supplier Sampling Evaluation" && cur_frm.is_new()) {
-							cur_frm.set_value("supplier", supplier);
+						// The form frappe.new_doc() just routed to. frappe.views.formview is
+						// Frappe's own registry of open form views; FormFactory keys it by
+						// doctype_layout when there is one, by doctype otherwise.
+						const route = frappe.get_route() || [];
+						const new_frm = frappe.views.formview[frappe.router.doctype_layout || route[1]]?.frm;
+						if (new_frm && new_frm.doctype === "Supplier Sampling Evaluation" && new_frm.is_new()) {
+							new_frm.set_value("supplier", supplier);
 						}
 					});
 				}, __("Create"));
@@ -125,8 +130,13 @@ frappe.ui.form.on("Supplier Compliance Audit", {
 							kyc: frm.doc.kyc,
 							sampling_type: "Onboarding",
 						}).then(() => {
-							if (cur_frm && cur_frm.doctype === "Supplier Sampling Evaluation" && cur_frm.is_new()) {
-								cur_frm.set_value("supplier", supplier);
+							// The form frappe.new_doc() just routed to. frappe.views.formview is
+							// Frappe's own registry of open form views; FormFactory keys it by
+							// doctype_layout when there is one, by doctype otherwise.
+							const route = frappe.get_route() || [];
+							const new_frm = frappe.views.formview[frappe.router.doctype_layout || route[1]]?.frm;
+							if (new_frm && new_frm.doctype === "Supplier Sampling Evaluation" && new_frm.is_new()) {
+								new_frm.set_value("supplier", supplier);
 							}
 						});
 					}, __("Create"));

@@ -183,7 +183,9 @@ class SupplierReboardingRequest(Document):
 				as_dict=True,
 			)
 			if contact:
-				self.contact_person_name = " ".join(filter(None, [contact.first_name, contact.last_name]))
+				self.contact_person_name = " ".join(
+					part for part in (contact.first_name, contact.last_name) if part
+				)
 				# Contact's own number is free text (often saved with no
 				# country code), but contact_person_number is a strict
 				# Phone field — normalize it, and fall back to the KYC

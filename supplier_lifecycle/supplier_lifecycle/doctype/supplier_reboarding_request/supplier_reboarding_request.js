@@ -222,8 +222,8 @@ function add_create_buttons(frm) {
 	// until the user actually clicks Save. reboarding_request (and the
 	// Type field, for the 3 doctypes that have one) are handed over as
 	// route_options; supplier (and, for Background Check, is_reboarding) are
-	// then set explicitly via cur_frm.set_value() once frappe.new_doc's
-	// own promise confirms the new form actually exists — see open_new()
+	// then set explicitly via set_value() on the newly-opened form once
+	// frappe.new_doc's own promise confirms it exists — see open_new()
 	// below. A plain route_options value alone isn't reliable enough for
 	// a mandatory field; confirmed the hard way on this exact button.
 	const stage_labels = {
@@ -273,8 +273,13 @@ function add_create_buttons(frm) {
 			reboarding_request: frm.doc.name,
 			...(type_field ? { [type_field]: "Reboarding" } : {}),
 		}).then(() => {
-			if (cur_frm && cur_frm.doctype === doctype && cur_frm.is_new()) {
-				cur_frm.set_value("supplier", supplier);
+			// The form frappe.new_doc() just routed to. frappe.views.formview is
+			// Frappe's own registry of open form views; FormFactory keys it by
+			// doctype_layout when there is one, by doctype otherwise.
+			const route = frappe.get_route() || [];
+			const new_frm = frappe.views.formview[frappe.router.doctype_layout || route[1]]?.frm;
+			if (new_frm && new_frm.doctype === doctype && new_frm.is_new()) {
+				new_frm.set_value("supplier", supplier);
 				// A doctype with its own Type field (audit_type,
 				// sampling_type, signoff_type) derives is_reboarding from
 				// that automatically, server-side — but Supplier Background
@@ -282,7 +287,7 @@ function add_create_buttons(frm) {
 				// built for it), so it still needs is_reboarding set
 				// explicitly here, same as kyc/supplier themselves.
 				if (!type_field) {
-					cur_frm.set_value("is_reboarding", 1);
+					new_frm.set_value("is_reboarding", 1);
 				}
 			}
 		});
